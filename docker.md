@@ -349,6 +349,8 @@ int main () {
 }
 ```
 Dockerfile of a distroless container container size is 18.5Mb
+
+Multi-stage build
 ```Docker
 FROM ubuntu AS build
 RUN apt-get update
@@ -361,4 +363,86 @@ CMD ["/hello"]
 ```
 ```
 docker build -t hello .
+```
+
+### Reducing image size primer:
+```Docker
+FROM ubuntu
+RUN apt-get update \
+ && apt-get install xxx \
+ && ... \
+ && apt-get remove xxx \
+ && ...
+ ```
+
+### Exploring a crashed container
+ ```
+docker commit <container_id> debugimage //naredi novo sliko
+
+docker run -ti --entrypoint sh debugimage //custom entrypoint
+
+
+docker export <container_id> | tar tv //za celoten container dump
+ ```
+
+ ## Docker compose
+ A Compose file has multiple sections:
+
+- `version` is mandatory. (We should use "2" or later; version 1 is deprecated.)
+    - Version 1 is legacy and shouldn't be used.
+    (If you see a Compose file without version and services, it's a legacy v1 file.)
+    - Version 2 added support for networks and volumes.
+    - Version 3 added support for deployment options (scaling, rolling updates, etc).
+- `services` is mandatory. A service is one or more replicas of the same image running as containers.
+
+- `networks` is optional and indicates to which networks containers should be connected.
+(By default, containers will be connected on a private, per-compose-file network.)
+
+- `volumes` is optional and can define volumes to be used and/or shared by the containers.
+
+Each service in the YAML file must contain either build, or image.
+
+- `build` indicates a path containing a Dockerfile.
+
+- `image` indicates an image name (local, or on a registry).
+
+- If both are specified, an image will be built from the build directory and named image.
+
+- `command` indicates what to run (like CMD in a Dockerfile).
+
+- `ports` translates to one (or multiple) -p options to map ports.
+You can specify local ports (i.e. x:y to expose public port x).
+
+- `volumes` translates to one (or multiple) -v options.
+You can use relative paths here.
+### Docker compose primer1:
+```yml
+version: "2"
+services:
+  www:
+    build: www
+    ports:
+      - 8000:5000
+    user: nobody
+    environment:
+      DEBUG: 1
+    command: python counter.py
+    volumes:
+      - ./www:/src
+  redis:
+    image: redis
+```
+### Ukazi
+```
+docker-compose up --build
+
+docker-compose up -d // v ozadju
+
+docker-compose ps // statusi docker-compose
+
+docker-compose kill // ustavi vse
+
+docker-compose rm -f //odsrani vse
+
+docker-compose down // will stop and remove containers
 ```
